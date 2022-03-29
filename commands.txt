@@ -1,0 +1,7 @@
+spark-submit --class ca.uwaterloo.cs451.final_project.BlockParserSpark --executor-memory 5g --driver-memory 5g target/assignments-1.0.jar
+
+spark-submit --deploy-mode client --class ca.uwaterloo.cs451.final_project.BlockParserSpark --num-executors 4 --executor-cores 4 --executor-memory 24G --driver-memory 2g target/assignments-1.0.jar
+
+spark-shell --num-executors 2 --executor-cores 4 --executor-memory 5g --driver-memory 5g --jars target/assignments-1.0.jar
+
+spark-shell --num-executors 1 --executor-cores 4 --executor-memory 5g --driver-memory 5g --jars target/assignments-1.0.jar

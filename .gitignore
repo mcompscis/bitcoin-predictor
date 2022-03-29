@@ -11,3 +11,6 @@ buildNumber.properties
 .mvn/wrapper/maven-wrapper.jar
 Coinbase_*
 #test
+bitcoin_blocks/
+target/
+transactions/
