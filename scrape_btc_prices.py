@@ -6,6 +6,9 @@ import requests
 import json
 from datetime import datetime, timedelta
 import math
+import os
+
+CSV_FILE_SUFFIX = "_data.csv"
 
 def get_time_intervals(req_limit, req_interval, start, end):
     start_date = datetime.strptime(start, "%m/%d/%Y")
@@ -44,7 +47,25 @@ def fetch_data(symbol, time, start, end, iteration):
     else:
         print("Did not receieve OK response from Coinbase API")
 
+def get_csv_filenames(files):
+    return [filename for filename in files if filename.endswith(CSV_FILE_SUFFIX)]
 
+def combine_csvs(path="."):
+    """
+    Function combines the multiple CSVs into one CSV called Coinbase_BTCUSD.csv
+    """
+    files = os.listdir(path)
+    csv_files = get_csv_filenames(files)
+    dfs = [pd.read_csv(csv_file) for csv_file in csv_files]
+    df_concat = pd.concat(dfs)
+    df_concat = df_concat.drop_duplicates()
+    df_concat.to_csv("Coinbase_BTCUSD.csv", index=False)
+    for file in csv_files:
+        if file.endswith(CSV_FILE_SUFFIX):
+            os.remove(file)
+    
+
+    
 if __name__ == "__main__":
 # we set which pair we want to retrieve data for
     pair = "BTC/USD"
@@ -57,4 +78,7 @@ if __name__ == "__main__":
     time_intervals = get_time_intervals(req_limit=300, req_interval=300, start=start, end=end)
     for i, interval in enumerate(time_intervals):
         fetch_data(pair, time, interval[0], interval[1], i)
+    path = "."
+    combine_csvs(path)
+
                                    
