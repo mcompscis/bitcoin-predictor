@@ -13,3 +13,5 @@ Coinbase_*
 bitcoin_blocks/
 target/
 transactions/
+derby.log
+metastore_db/

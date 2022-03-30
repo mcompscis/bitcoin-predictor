@@ -60,6 +60,7 @@ def combine_csvs(path="."):
     df_concat = pd.concat(dfs)
     df_concat = df_concat.drop_duplicates()
     df_concat.to_csv("Coinbase_BTCUSD.csv", index=False)
+    df_concat.to_parquet("Coinbase_BTCUSD.pq", index=False)
     for file in csv_files:
         if file.endswith(CSV_FILE_SUFFIX):
             os.remove(file)
@@ -72,9 +73,9 @@ if __name__ == "__main__":
     time = "5mins"
 
     #hardcoded start 2/27/2022
-    start = "2/27/2022"
+    start = "2/26/2022"
     #hardcode end 3/7/2022
-    end = "3/7/2022"
+    end = "3/10/2022"
     time_intervals = get_time_intervals(req_limit=300, req_interval=300, start=start, end=end)
     for i, interval in enumerate(time_intervals):
         fetch_data(pair, time, interval[0], interval[1], i)
