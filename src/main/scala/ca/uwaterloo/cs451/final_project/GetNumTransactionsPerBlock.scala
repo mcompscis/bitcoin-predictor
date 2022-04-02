@@ -60,7 +60,7 @@ object GetNumTransactionsPerBlock {
         val sc = new SparkContext(conf)
 
         val rawTransactionsOutputDir = "raw_transactions"
-        val outputDir = "NumTransactionsPerBlock.csv"
+        val outputDir = "NumTransactionsPerBlock"
 
         val outputDirs = List(outputDir)
         outputDirs.foreach(outputDir => {
@@ -88,10 +88,11 @@ object GetNumTransactionsPerBlock {
             val blockFloorTime = (block.header.time / 60)*60 // blockFloorTime is block timestamp truncated to minute-level granularity
             val txns = block.tx.drop(1) // dropping the coinbase transaction (miner's reward)
             (blockFloorTime, txns.length)
-        })
+        }).reduceByKey((x, y) => x+y)
 
         var finalRDD = numTransactionsPerBlock.join(btc_usd_rdd)
                                     .map(x => (x._1, x._2._1, x._2._2._4)) // x._2._1 is numTransactions in Block, x._2._2._4 is closing price for the timestamp
+                                    .map(x => s"${x._1},${x._2},${x._3}")
         
         finalRDD.coalesce(1).saveAsTextFile(outputDir)
 
