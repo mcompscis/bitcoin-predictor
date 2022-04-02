@@ -18,6 +18,8 @@ import org.apache.spark.sql.SparkSession
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SparkSession
 import scala.collection.mutable.ArrayBuffer
+import fr.acinq.bitcoin.Crypto
+import scodec.bits._
 
 
 /*
@@ -42,6 +44,28 @@ object GetRawData {
         block
     }
 
+    def determinePubKeyHash(input: String): String = {
+            val inputLen = input.length()
+
+            //paytopubhashkey
+            if (input.startsWith("76a914") && input.endsWith("88ac")) {
+                input.substring("76a914".length, input.length - "88ac".length)
+            }
+            //paytoscripthash
+            else if (input.startsWith("a914") && input.endsWith("87")) {
+                input.substring("a914".length, input.length - "87".length)
+            }
+            //paytopubkey
+            else if (input.endsWith("ac")) {
+                val pub = input.substring(0, input.length - "ac".length)
+                Crypto.hash160(ByteVector.fromHex(pub).get).toHex
+            }
+            else {
+                input
+            }
+        }
+
+
     def readBlocks(input: DataInputStream, blocks: List[Block]): List[Block] = {
         if (input.available() <= 0) {
             blocks
@@ -54,7 +78,7 @@ object GetRawData {
     def main(argv: Array[String]): Unit = {
         val args = new GetRawDataConf(argv)
 
-        val conf = new SparkConf().setAppName("Bitcoin Block Parser")
+        val conf = new SparkConf().setAppName("Raw Data Bitcoin Parser")
         val sc = new SparkContext(conf)
 
         val rawTransactionsOutputDir = "raw_transactions"
@@ -65,8 +89,9 @@ object GetRawData {
             FileSystem.get(sc.hadoopConfiguration).delete(new Path(outputDir), true)
         })
 
+        val btcUsdDataPath = "Coinbase_BTCUSD.pq"
         val sparkSession = SparkSession.builder.getOrCreate
-        var btc_usd_rdd = sparkSession.read.parquet("Coinbase_BTCUSD.pq").rdd
+        var btc_usd_rdd = sparkSession.read.parquet(btcUsdDataPath).rdd
                                 .map(x => (x(0).toString.toLong,(x(1).toString.toDouble, x(2).toString.toDouble,
                                 x(3).toString.toDouble, x(4).toString.toDouble, x(5).toString.toDouble,
                                 x(6).toString, x(7).toString.toDouble))
@@ -92,7 +117,8 @@ object GetRawData {
                 tx.txOut.foreach(txOut => {
                     val amountInBtc = txOut.amount.toBtc.toDouble
                     val publicKeyScript = txOut.publicKeyScript.toHex
-                    buffer += ((blockFloorTime, txid, numReceivers, numUniqueReceivers, amountInBtc, publicKeyScript))
+                    val publicKeyHash = determinePubKeyHash(publicKeyScript)
+                    buffer += ((blockFloorTime, txid, numReceivers, numUniqueReceivers, amountInBtc, publicKeyHash))
                     // TODO: Add logic for PublicKeyScript to Public key hash conversion when possible
                 })
             })
@@ -112,17 +138,19 @@ object GetRawData {
         val blockWithRcvrAcctBtcUsdData = btc_usd_rdd.join(blockWithRcvrAcctData).map(x => (x._1, x._2._1._4, x._2._2._1, x._2._2._2, x._2._2._3))
         // (unixtime, btc_usd_close, publicKeyScript, totalAmtReceivedInBlock, numOccurrencesAsReceiverInBlock)
         // TODO: Get 15min or 1 hour later data as well and join?
-
-        blockWithRcvrAcctBtcUsdData.saveAsTextFile(rcvrAcctRawDataOutputDir)
+        val textOutputRDD = blockWithRcvrAcctBtcUsdData.map(x => s"$x._1,$x._3,$x._5,$x._4,$x._2")
+        textOutputRDD.saveAsTextFile(rcvrAcctRawDataOutputDir)
         // NOTE: 2 blocks within same 5-minute interval counted as one block 
         // ((unixtime, publicKeyScript), (totalAmountBtc))
         // txns.map(txn => ((txn._1, (txn._2, txn._3, txn._4, txn._5, txn._6)))
         // .
          // key is the unixtime
 
+        // TODO: Next step, look into receiver addresses that appear in multiple timestamps
 
 
-        txns.saveAsTextFile(rawTransactionsOutputDir)
+
+        // txns.saveAsTextFile(rawTransactionsOutputDir)
 
   }
 }
