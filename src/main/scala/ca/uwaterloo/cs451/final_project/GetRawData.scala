@@ -138,7 +138,7 @@ object GetRawData {
         val blockWithRcvrAcctBtcUsdData = btc_usd_rdd.join(blockWithRcvrAcctData).map(x => (x._1, x._2._1._4, x._2._2._1, x._2._2._2, x._2._2._3))
         // (unixtime, btc_usd_close, publicKeyScript, totalAmtReceivedInBlock, numOccurrencesAsReceiverInBlock)
         // TODO: Get 15min or 1 hour later data as well and join?
-        val textOutputRDD = blockWithRcvrAcctBtcUsdData.map(x => s"$x._1,$x._3,$x._5,$x._4,$x._2")
+        val textOutputRDD = blockWithRcvrAcctBtcUsdData.map(x => s"${x._1},${x._3},${x._5},${x._4},${x._2}")
         textOutputRDD.saveAsTextFile(rcvrAcctRawDataOutputDir)
         // NOTE: 2 blocks within same 5-minute interval counted as one block 
         // ((unixtime, publicKeyScript), (totalAmountBtc))
