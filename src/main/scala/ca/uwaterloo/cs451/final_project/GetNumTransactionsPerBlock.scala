@@ -20,6 +20,7 @@ import org.apache.spark.sql.SparkSession
 import scala.collection.mutable.ArrayBuffer
 import fr.acinq.bitcoin.Crypto
 import scodec.bits._
+import java.io._
 
 
 /*
@@ -76,7 +77,8 @@ object GetNumTransactionsPerBlock {
                                 )
                                 // (unix,(low,high,open,close,volume,date,vol_fiat))
         
-                
+        val btcUsdRDDMapBroadcast = sc.broadcast(btc_usd_rdd.collectAsMap)
+
         var binaryFiles = sc.binaryFiles("bitcoin_blocks")
         // binaryFiles = sc.parallelize(binaryFiles.take(1))
         var blocks = binaryFiles.flatMap(binaryFile => {
@@ -91,10 +93,14 @@ object GetNumTransactionsPerBlock {
         }).reduceByKey((x, y) => x+y)
 
         var finalRDD = numTransactionsPerBlock.join(btc_usd_rdd)
-                                    .map(x => (x._1, x._2._1, x._2._2._4)) // x._2._1 is numTransactions in Block, x._2._2._4 is closing price for the timestamp
-                                    .map(x => s"${x._1},${x._2},${x._3}")
-        
-        finalRDD.coalesce(1).saveAsTextFile(outputDir)
+                                    .map(x => (x._1, x._2._1, x._2._2._4, btcUsdRDDMapBroadcast.value(x._1+(4*60*60))._4)) // x._2._1 is numTransactions in Block, x._2._2._4 is closing price for the timestamp
+                                    .sortBy(x => x._1, true)
+                                    .map(x => s"${x._1},${x._2},${x._3},${x._4}")
+        val finalData = finalRDD.collect()
+        val pw = new PrintWriter("numTransactionsPerBlock.csv")
+        finalData.foreach(x => pw.write(s"$x\n"))
+        pw.close
+        // finalRDD.coalesce(1).saveAsTextFile(outputDir)
 
   }
 }

@@ -83,8 +83,10 @@ object GetRawData {
 
         val rawTransactionsOutputDir = "raw_transactions"
         val rcvrAcctRawDataOutputDir = "receiver_account_raw_data"
+        val trainRcvrAcctDataOutputDir = "train_receiver_account_raw_data"
+        val testRcvrAcctDataOutputDir = "test_receiver_account_raw_data"
 
-        val outputDirs = List(rawTransactionsOutputDir, rcvrAcctRawDataOutputDir)
+        val outputDirs = List(rawTransactionsOutputDir, rcvrAcctRawDataOutputDir, trainRcvrAcctDataOutputDir, testRcvrAcctDataOutputDir)
         outputDirs.foreach(outputDir => {
             FileSystem.get(sc.hadoopConfiguration).delete(new Path(outputDir), true)
         })
@@ -108,7 +110,7 @@ object GetRawData {
         
         var txns = blocks.flatMap(block => {
             var buffer = ArrayBuffer[(Long, String, Int, Int, Double, String)]() // TODO: Add parameter signature
-            val blockFloorTime = (block.header.time / 300)*300 // block time floored to some 5-minute interval to join with BTC_USD price
+            val blockFloorTime = (block.header.time / 60)*60 // blockFloorTime is block timestamp truncated to minute-level granularity
             val txns = block.tx.drop(1) // dropping the coinbase transaction (miner's reward)
             txns.foreach(tx => {
                 val txid = tx.txid.toHex
@@ -119,32 +121,34 @@ object GetRawData {
                     val publicKeyScript = txOut.publicKeyScript.toHex
                     val publicKeyHash = determinePubKeyHash(publicKeyScript)
                     buffer += ((blockFloorTime, txid, numReceivers, numUniqueReceivers, amountInBtc, publicKeyHash))
-                    // TODO: Add logic for PublicKeyScript to Public key hash conversion when possible
                 })
             })
             buffer
         })
-
-        // blocks.map(x => (x.header.time/300)*300)
         // (unixtime, txid, numReceivers, numUniqueReceivers, amountInBtc, publicKeyScript)
 
-        println("MINIMUM TRANSACTION TIME: " + txns.takeOrdered(1)(Ordering[Long].on(x => x._1))(0))
-        println("MAXIMUM TRANSACTION TIME: " + txns.top(1)(Ordering[Long].on(x => x._1))(0))
+        // println("MINIMUM TRANSACTION TIME: " + txns.takeOrdered(1)(Ordering[Long].on(x => x._1))(0))
+        // println("MAXIMUM TRANSACTION TIME: " + txns.top(1)(Ordering[Long].on(x => x._1))(0))
 
         val blockWithRcvrAcctData = txns.map(txn => ((txn._1, txn._6), (txn._5, 1))) // ((unixtime, publicKeyScript), (amt, 1))
                                     .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2))
                                     .map(txn => (txn._1._1, (txn._1._2, txn._2._1, txn._2._2)))
 
         val blockWithRcvrAcctBtcUsdData = btc_usd_rdd.join(blockWithRcvrAcctData).map(x => (x._1, x._2._1._4, x._2._2._1, x._2._2._2, x._2._2._3))
+        val blockTimestampsRDD = blockWithRcvrAcctData.map(x => x._1).distinct.sortBy(x => x, true).zipWithIndex()
+        val finalTrainingPointUnixTime = blockTimestampsRDD.filter(x => (x._2 == 1999)).take(1)(0)._1  // NOTE: Hardcoding first 2000 points as training
+        val numBlocks = blockTimestampsRDD.count
+        val trainData = blockWithRcvrAcctBtcUsdData.filter(x => (x._1 <= finalTrainingPointUnixTime))
+        val testData = blockWithRcvrAcctBtcUsdData.filter(x => (x._1 > finalTrainingPointUnixTime))
         // (unixtime, btc_usd_close, publicKeyScript, totalAmtReceivedInBlock, numOccurrencesAsReceiverInBlock)
-        // TODO: Get 15min or 1 hour later data as well and join?
+        val trainDataTextFile = trainData.map(x => s"${x._1},${x._3},${x._5},${x._4},${x._2}")
+        val testDataTextFile = testData.map(x => s"${x._1},${x._3},${x._5},${x._4},${x._2}")
         val textOutputRDD = blockWithRcvrAcctBtcUsdData.map(x => s"${x._1},${x._3},${x._5},${x._4},${x._2}")
+        // (unixtime, publicKeyHash, numTransactions, totalAmtBTC, btc_usd_close)
         textOutputRDD.saveAsTextFile(rcvrAcctRawDataOutputDir)
-        // NOTE: 2 blocks within same 5-minute interval counted as one block 
-        // ((unixtime, publicKeyScript), (totalAmountBtc))
-        // txns.map(txn => ((txn._1, (txn._2, txn._3, txn._4, txn._5, txn._6)))
-        // .
-         // key is the unixtime
+        trainDataTextFile.saveAsTextFile(trainRcvrAcctDataOutputDir)
+        testDataTextFile.saveAsTextFile(testRcvrAcctDataOutputDir)
+
 
         // TODO: Next step, look into receiver addresses that appear in multiple timestamps
 
