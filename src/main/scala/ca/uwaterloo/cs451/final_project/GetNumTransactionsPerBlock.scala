@@ -88,16 +88,22 @@ object GetNumTransactionsPerBlock {
         
         var numTransactionsPerBlock = blocks.map(block => {
             val blockFloorTime = (block.header.time / 60)*60 // blockFloorTime is block timestamp truncated to minute-level granularity
-            val txns = block.tx.drop(1) // dropping the coinbase transaction (miner's reward)
-            (blockFloorTime, txns.length)
-        }).reduceByKey((x, y) => x+y)
+            // val txns = block.tx.drop(1) // dropping the coinbase transaction (miner's reward)
+            val txns = block.tx
+            val numTransactions = txns.length
+            val coinbaseTxn = txns(0)
+            val totalMinerReward = coinbaseTxn.txOut(0).amount.toBtc.toDouble // miner's reward + fee reward
+            val feeReward = totalMinerReward - 6.25
+            val totalBtcAmountReceivedInBlock = block.tx.map(txn => txn.txOut.map(txOut => txOut.amount.toBtc.toDouble).sum).sum
+            (blockFloorTime, (txns.length, totalBtcAmountReceivedInBlock, feeReward))
+        }).reduceByKey((x, y) => (x._1+y._1, x._2+y._2, x._3+y._3))
 
-        var finalRDD = numTransactionsPerBlock.join(btc_usd_rdd)
-                                    .map(x => (x._1, x._2._1, x._2._2._4, btcUsdRDDMapBroadcast.value(x._1+(4*60*60))._4)) // x._2._1 is numTransactions in Block, x._2._2._4 is closing price for the timestamp
+        var finalRDD = numTransactionsPerBlock.map(x => (x._1, x._2._1, x._2._2, x._2._3, btcUsdRDDMapBroadcast.value(x._1)._4, btcUsdRDDMapBroadcast.value(x._1+(4*60*60))._4))
                                     .sortBy(x => x._1, true)
-                                    .map(x => s"${x._1},${x._2},${x._3},${x._4}")
+                                    .map(x => s"${x._1},${x._2},${x._3},${x._4},${x._5},${x._6}")
         val finalData = finalRDD.collect()
         val pw = new PrintWriter("numTransactionsPerBlock.csv")
+        pw.write("block_timestamp,num_txns_in_block,total_btc_in_block,total_fee_reward,btc_usd_price_at_timestamp,btc_usd_price_4_hrs_later\n")
         finalData.foreach(x => pw.write(s"$x\n"))
         pw.close
         // finalRDD.coalesce(1).saveAsTextFile(outputDir)
