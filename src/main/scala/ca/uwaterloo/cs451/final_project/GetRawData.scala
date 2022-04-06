@@ -100,7 +100,8 @@ object GetRawData {
                                 )
                                 // (unix,(low,high,open,close,volume,date,vol_fiat))
         
-                
+        val btcUsdRDDMapBroadcast = sc.broadcast(btc_usd_rdd.collectAsMap)
+      
         var binaryFiles = sc.binaryFiles("bitcoin_blocks")
         // binaryFiles = sc.parallelize(binaryFiles.take(1))
         var blocks = binaryFiles.flatMap(binaryFile => {
@@ -109,7 +110,7 @@ object GetRawData {
         })
         
         var txns = blocks.flatMap(block => {
-            var buffer = ArrayBuffer[(Long, String, Int, Int, Double, String)]() // TODO: Add parameter signature
+            var buffer = ArrayBuffer[(Long, String, Int, Int, Double, String)]()
             val blockFloorTime = (block.header.time / 60)*60 // blockFloorTime is block timestamp truncated to minute-level granularity
             val txns = block.tx.drop(1) // dropping the coinbase transaction (miner's reward)
             txns.foreach(tx => {
@@ -134,7 +135,8 @@ object GetRawData {
                                     .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2))
                                     .map(txn => (txn._1._1, (txn._1._2, txn._2._1, txn._2._2)))
 
-        val blockWithRcvrAcctBtcUsdData = btc_usd_rdd.join(blockWithRcvrAcctData).map(x => (x._1, x._2._1._4, x._2._2._1, x._2._2._2, x._2._2._3))
+        val blockWithRcvrAcctBtcUsdData = blockWithRcvrAcctData.map(x => (x._1, btcUsdRDDMapBroadcast.value(x._1)._4, x._2._1, x._2._2, x._2._3))
+        // (unixtime, btc_usd_price, public_key_script, amtInBTCReceivedByThatAddressInThatBlock, numTransactions they received in block)
         val blockTimestampsRDD = blockWithRcvrAcctData.map(x => x._1).distinct.sortBy(x => x, true).zipWithIndex()
         val finalTrainingPointUnixTime = blockTimestampsRDD.filter(x => (x._2 == 1999)).take(1)(0)._1  // NOTE: Hardcoding first 2000 points as training
         val numBlocks = blockTimestampsRDD.count

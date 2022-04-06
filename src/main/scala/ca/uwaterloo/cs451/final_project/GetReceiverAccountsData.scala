@@ -65,9 +65,13 @@ object GetReceiverAccountsData {
         val numReceiversShowUpGt20PctBlocks = rcvrAcctPercentageOfBlocks.filter(x => x._2>0.2).count
         val numReceiversShowUpGt10PctBlocks = rcvrAcctPercentageOfBlocks.filter(x => x._2>0.1).count
         val numReceiversShowUpGt5PctBlocks = rcvrAcctPercentageOfBlocks.filter(x => x._2>0.05).count
-        println(s"NUMBER OF RECEIVERS SHOWING UP IN >= 20% of Blocks: ${numReceiversShowUpGt20PctBlocks}")
-        println(s"NUMBER OF RECEIVERS SHOWING UP IN >= 10% of Blocks: ${numReceiversShowUpGt10PctBlocks}")
-        println(s"NUMBER OF RECEIVERS SHOWING UP IN >= 5% of Blocks: ${numReceiversShowUpGt5PctBlocks}")
+        val numReceiversShowUpGt2_5PctBlocks = rcvrAcctPercentageOfBlocks.filter(x => x._2>0.025).count
+        val numReceiversShowUpGt1_25PctBlocks = rcvrAcctPercentageOfBlocks.filter(x => x._2>0.0125).count
+        println(s"NUMBER OF RECEIVERS REPEATING IN >= 20% of Blocks: ${numReceiversShowUpGt20PctBlocks}")
+        println(s"NUMBER OF RECEIVERS REPEATING IN >= 10% of Blocks: ${numReceiversShowUpGt10PctBlocks}")
+        println(s"NUMBER OF RECEIVERS REPEATING IN >= 5% of Blocks: ${numReceiversShowUpGt5PctBlocks}")
+        println(s"NUMBER OF RECEIVERS REPEATING IN >= 2.5% of Blocks: ${numReceiversShowUpGt2_5PctBlocks}")
+        println(s"NUMBER OF RECEIVERS REPEATING IN >= 1.25% of Blocks: ${numReceiversShowUpGt1_25PctBlocks}")
         // Let's define Popular receiver accounts as receiver accounts showing up in >= 5% of blocks (100 blocks)
         val popularReceivers = rcvrAcctPercentageOfBlocks.filter(x => x._2>0.0125) // 0.025 means receiver shows up in at least 50 blocks
         // < 100 blocks (< 00)
@@ -107,7 +111,7 @@ object GetReceiverAccountsData {
                                         // (rcvr_addr, 200, 120, 180)
                                         // (rcvr_addr, 200, 120/200, 180/200)
         
-            val thresholds = List(0.9, 0.8, 0.75, 0.7, 0.65, 0.6)
+            val thresholds = List(0.9, 0.8, 0.75, 0.7, 0.65)
             // thresholds.foreach(threshold => new PrintWriter(new File(s"rcvr_addresses_with_acc_${threshold}.txt")))
             // val thresholdToHighValueAddrMap = Map[Float, Array[(String, Int, Double, Float, Float, Float, Float, Float)]]()
             // val thresholdToFileMap = Map[Float, List[PrintWriter]]()
