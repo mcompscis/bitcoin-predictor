@@ -151,12 +151,5 @@ object GetRawData {
         trainDataTextFile.saveAsTextFile(trainRcvrAcctDataOutputDir)
         testDataTextFile.saveAsTextFile(testRcvrAcctDataOutputDir)
 
-
-        // TODO: Next step, look into receiver addresses that appear in multiple timestamps
-
-
-
-        // txns.saveAsTextFile(rawTransactionsOutputDir)
-
   }
 }
