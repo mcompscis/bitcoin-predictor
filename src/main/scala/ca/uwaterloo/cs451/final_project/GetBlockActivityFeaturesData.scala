@@ -27,13 +27,13 @@ import java.io._
 A Script to get raw transaction level data and block-receiver acct level data
 
 */
-class GetNumTransactionsPerBlockConf(args: Seq[String]) extends ScallopConf(args) {
+class GetBlockActivityFeaturesDataConf(args: Seq[String]) extends ScallopConf(args) {
   mainOptions = Seq(blockpath)
   val blockpath = opt[String](descr = "block file", required = false)
   verify()
 }
 
-object GetNumTransactionsPerBlock {
+object GetBlockActivityFeaturesData {
 
     def readBlock(input: DataInputStream): Block = {
         val magic = uint32(input)
@@ -55,7 +55,7 @@ object GetNumTransactionsPerBlock {
     }
         
     def main(argv: Array[String]): Unit = {
-        val args = new GetNumTransactionsPerBlockConf(argv)
+        val args = new GetBlockActivityFeaturesDataConf(argv)
 
         val conf = new SparkConf().setAppName("Bitcoin Block Parser")
         val sc = new SparkContext(conf)
