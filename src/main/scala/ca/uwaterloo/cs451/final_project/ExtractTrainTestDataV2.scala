@@ -195,10 +195,10 @@ object ExtractTrainTestDataV2 {
         // df = df.withColumn("changeInNumTxnsBtw1And2BlocksAgo", col("numTxns1BlockAgo") - col("numTxns2BlocksAgo"))
         // df = df.withColumn("changeInNumTxnsBtw2And3BlocksAgo", col("numTxns2BlocksAgo") - col("numTxns3BlocksAgo"))
         // df = df.withColumn("changeInNumTxnsBtw3And4BlocksAgo", col("numTxns3BlocksAgo") - col("numTxns4BlocksAgo"))
-        // df = df.withColumn("changeInBtcPriceBtwCurrAnd1HrAgo", col("currBitcoinPrice") - col("bitcoinPrice1HrAgo"))        
-        // df = df.withColumn("changeInBtcPriceBtw1And2HrAgo", col("bitcoinPrice1HrAgo") - col("bitcoinPrice2HrAgo"))        
-        // df = df.withColumn("changeInBtcPriceBtw2And3HrAgo", col("bitcoinPrice2HrAgo") - col("bitcoinPrice3HrAgo"))        
-        // df = df.withColumn("changeInBtcPriceBtw3And4HrAgo", col("bitcoinPrice3HrAgo") - col("bitcoinPrice4HrAgo"))        
+        df = df.withColumn("changeInBtcPriceBtwCurrAnd1HrAgo", col("currBitcoinPrice") - col("bitcoinPrice1HrAgo"))        
+        df = df.withColumn("changeInBtcPriceBtw1And2HrAgo", col("bitcoinPrice1HrAgo") - col("bitcoinPrice2HrAgo"))        
+        df = df.withColumn("changeInBtcPriceBtw2And3HrAgo", col("bitcoinPrice2HrAgo") - col("bitcoinPrice3HrAgo"))        
+        df = df.withColumn("changeInBtcPriceBtw3And4HrAgo", col("bitcoinPrice3HrAgo") - col("bitcoinPrice4HrAgo"))        
 
         var df_train = df.limit(3800).toDF
         var df_valid_and_test = df.except(df_train).toDF

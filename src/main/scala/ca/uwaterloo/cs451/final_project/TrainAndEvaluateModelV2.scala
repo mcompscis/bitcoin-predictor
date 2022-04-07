@@ -65,7 +65,7 @@ object TrainAndEvaluateModelV2 {
             "currBitcoinPrice", 
             "bitcoinPrice1HrAgo", "bitcoinPrice2HrAgo", "bitcoinPrice3HrAgo", "bitcoinPrice4HrAgo",
           //  "avgAmtOfBtcPerTxn", 
-           "numTxnsWithMoreThan10Outputs", "numHighValueTxnsInBlock"
+           "numTxnsWithMoreThan10Outputs", "numHighValueTxnsInBlock",
           //  , "totalBtcAmountReceived1BlockAgo", "totalBtcAmountReceived2BlocksAgo",
           //  "totalBtcAmountReceived3BlocksAgo", "totalBtcAmountReceived4BlocksAgo",
           //  "numTxns1BlockAgo", "numTxns2BlocksAgo", "numTxns3BlocksAgo", "numTxns4BlocksAgo"
@@ -74,9 +74,8 @@ object TrainAndEvaluateModelV2 {
           //  "changeInBtcAmtBtw3And4BlocksAgo",
           //  "changeInNumTxnsBtwCurrAnd1BlockAgo", "changeInNumTxnsBtw1And2BlocksAgo",
           //  "changeInNumTxnsBtw2And3BlocksAgo", "changeInNumTxnsBtw3And4BlocksAgo",
-          //  "changeInBtcPriceBtwCurrAnd1HrAgo", "changeInBtcPriceBtw1And2HrAgo",
-           
-          //  "changeInBtcPriceBtw2And3HrAgo", "changeInBtcPriceBtw3And4HrAgo"
+           "changeInBtcPriceBtwCurrAnd1HrAgo", "changeInBtcPriceBtw1And2HrAgo",           
+           "changeInBtcPriceBtw2And3HrAgo", "changeInBtcPriceBtw3And4HrAgo"
         )
         
         val assembler = new VectorAssembler().setInputCols(features).setOutputCol("features")
