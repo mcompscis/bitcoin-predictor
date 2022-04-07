@@ -81,7 +81,7 @@ object HyperparameterTuner {
         val stages = Array(assembler, randomForestClassifier)
         val pipeline = new Pipeline().setStages(stages)
 
-        val paramGrid = new ParamGridBuilder().addGrid(randomForestClassifier.numTrees, Array(100, 200, 500)).addGrid(randomForestClassifier.maxDepth, Array(2, 4, 10)).build()
+        val paramGrid = new ParamGridBuilder().addGrid(randomForestClassifier.numTrees, Array(100, 200, 500)).addGrid(randomForestClassifier.maxDepth, Array(4, 10, 20)).build()
 
         val evaluator = new MulticlassClassificationEvaluator().setMetricName("accuracy")
         val cv = new CrossValidator().setEstimator(pipeline).setEvaluator(evaluator) .setEstimatorParamMaps(paramGrid).setNumFolds(5)

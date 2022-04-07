@@ -74,7 +74,7 @@ object TrainAndEvaluateModelV2 {
           //  "changeInBtcAmtBtw3And4BlocksAgo",
           //  "changeInNumTxnsBtwCurrAnd1BlockAgo", "changeInNumTxnsBtw1And2BlocksAgo",
           //  "changeInNumTxnsBtw2And3BlocksAgo", "changeInNumTxnsBtw3And4BlocksAgo",
-          //  "changeInBtcPriceBtwCurrAnd1HrAgo", "changeInBtcPriceBtw1And2HrAgo"
+          //  "changeInBtcPriceBtwCurrAnd1HrAgo", "changeInBtcPriceBtw1And2HrAgo",
            
           //  "changeInBtcPriceBtw2And3HrAgo", "changeInBtcPriceBtw3And4HrAgo"
         )
@@ -85,19 +85,12 @@ object TrainAndEvaluateModelV2 {
         val testFeatureDF = assembler.transform(df_test)
 
         // val indexer = new StringIndexer()
-        val randomForestClassifier = new RandomForestClassifier().setImpurity("gini").setMaxDepth(10).setNumTrees(200).setFeatureSubsetStrategy("auto").setSeed(1000)
-
-
-
+        val randomForestClassifier = new RandomForestClassifier().setImpurity("gini").setMaxDepth(10).setNumTrees(500).setFeatureSubsetStrategy("auto").setSeed(1000)
 
         val randomForestModel = randomForestClassifier.fit(trainFeatureDF)
         val predictionDf = randomForestModel.transform(validFeatureDF)
         val prediction2Df = randomForestModel.transform(testFeatureDF)
 
-        // val evaluator = new BinaryClassificationEvaluator()
-        //                     .setLabelCol("label")
-        
-        // evaluator.evaluate(predictionDf)
         val preds1RDD = predictionDf.select("prediction", "label").rdd.map(x => (x(0).toString.toDouble, x(1).toString.toDouble))
         val preds2RDD = prediction2Df.select("prediction", "label").rdd.map(x => (x(0).toString.toDouble, x(1).toString.toDouble))
         List(preds1RDD, preds2RDD).foreach(predsRDD => {
@@ -140,6 +133,8 @@ object TrainAndEvaluateModelV2 {
           println(s"Weighted false positive rate: ${metrics.weightedFalsePositiveRate}")
 
         })
+
+        print(randomForestModel.featureImportances)
 
   }
 }
