@@ -20,19 +20,21 @@ import scala.collection.mutable.ArrayBuffer
 import fr.acinq.bitcoin.Crypto
 import scodec.bits._
 import scala.io.Source
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.expressions.Window
 // import spark.implicits._
 
 /*
 A Script to get raw transaction level data and block-receiver acct level data
 
 */
-class ExtractTrainTestDataConf(args: Seq[String]) extends ScallopConf(args) {
+class ExtractTrainTestDataV1Conf(args: Seq[String]) extends ScallopConf(args) {
   mainOptions = Seq(blockpath)
   val blockpath = opt[String](descr = "block file", required = false)
   verify()
 }
 
-object ExtractTrainTestData {
+object ExtractTrainTestDataV1 {
 
     def readBlock(input: DataInputStream): Block = {
         val magic = uint32(input)
@@ -76,17 +78,20 @@ object ExtractTrainTestData {
     }
         
     def main(argv: Array[String]): Unit = {
-        val args = new ExtractTrainTestDataConf(argv)
+        val args = new ExtractTrainTestDataV1Conf(argv)
 
         val conf = new SparkConf().setAppName("Raw Data Bitcoin Parser")
         val sc = new SparkContext(conf)
 
         val trainDataPath = "train_bitcoin_blocks_data"
+        val validDataPath = "valid_bitcoin_blocks_data"
         val testDataPath = "test_bitcoin_blocks_data"
-        val outputDirs = List(trainDataPath, testDataPath)
+        val allDataPath = "test.csv"
+        val outputDirs = List(allDataPath, trainDataPath, validDataPath, testDataPath)
         outputDirs.foreach(outputDir => {
             FileSystem.get(sc.hadoopConfiguration).delete(new Path(outputDir), true)
         })
+        val bitcoin_blocks_path = "bitcoin_blocks_v2"
 
         val btcUsdDataPath = "Coinbase_BTCUSD.pq"
         val spark = SparkSession.builder.getOrCreate
@@ -108,7 +113,7 @@ object ExtractTrainTestData {
             rcvrAccountsMapping(rcvrAccountPath) = rcvrAddresses
         })
 
-        var binaryFiles = sc.binaryFiles("bitcoin_blocks")
+        var binaryFiles = sc.binaryFiles(bitcoin_blocks_path)
 
         var blocks = binaryFiles.flatMap(binaryFile => {
             var blocks = readBlocks(binaryFile._2.open(), List())
@@ -166,18 +171,33 @@ object ExtractTrainTestData {
         }).sortBy(x => x._2, true)
 
 
-        val df = blockLevelData.toDF("blockId", "blockFloorTime", "numUniqueReceivers", "numTxnsInBlock", "blockFeeReward", 
+        var df = blockLevelData.toDF("blockId", "blockFloorTime", "numUniqueReceivers", "numTxnsInBlock", "blockFeeReward", 
             "totalBtcAmountReceivedInBlock", "proportionOfReceiversWith65AccInBlock", "proportionOfReceiversWith70AccInBlock",
             "proportionOfReceiversWith75AccInBlock", "proportionOfReceiversWith80AccInBlock", "proportionOfReceiversWith90AccInBlock",
             "currBitcoinPrice", "bitcoinPrice1HrAgo", "bitcoinPrice2HrAgo", "bitcoinPrice3HrAgo", "bitcoinPrice4HrAgo",
             "avgAmtOfBtcPerTxn", "numTxnsWithMoreThan10Outputs", "numHighValueTxnsInBlock", "bitcoinPrice4HrLater", "label", "priceDiffBtw4HrLaterAndCurrPrice")
         
-        val df_train = df.limit(2100).toDF
-        val df_test = df.except(df_train).toDF
+        // val windowSpec  = Window.orderBy("blockFloorTime")
+        // df = df.withColumn("numTxns1BlockAgo", lag("numTxnsInBlock", 1).over(windowSpec))
+        // df = df.withColumn("numTxns2BlocksAgo", lag("numTxnsInBlock", 2).over(windowSpec))
+        // df = df.withColumn("numTxns3BlocksAgo", lag("numTxnsInBlock", 3).over(windowSpec))
+        // df = df.withColumn("numTxns4BlocksAgo", lag("numTxnsInBlock", 4).over(windowSpec))
+        // df = df.withColumn("totalBtcAmountReceived1BlockAgo", lag("totalBtcAmountReceivedInBlock", 1).over(windowSpec))
+        // df = df.withColumn("totalBtcAmountReceived2BlocksAgo", lag("totalBtcAmountReceivedInBlock", 2).over(windowSpec))
+        // df = df.withColumn("totalBtcAmountReceived3BlocksAgo", lag("totalBtcAmountReceivedInBlock", 3).over(windowSpec))
+        // df = df.withColumn("totalBtcAmountReceived4BlocksAgo", lag("totalBtcAmountReceivedInBlock", 4).over(windowSpec))
+        var df_train = df.limit(3800).toDF
+        var df_valid_and_test = df.except(df_train).toDF
+        var df_valid = df_valid_and_test.limit(500).toDF
+        var df_test = df_valid_and_test.except(df_valid).toDF
 
-        df.coalesce(1).write.option("header",true).csv("test.csv")
-        df_train.coalesce(1).write.option("header", true).csv("block_train_data")
-        df_test.coalesce(1).write.option("header", true).csv("block_test_data")
+
+        df.coalesce(1).write.option("header",true).parquet(allDataPath)
+        // df_train.write.option("header",true).parquet(allDa)
+        // df_valid_and_test.coalesce(1).write.option("header", true).parquet(testDataPath)
+        df_train.coalesce(1).write.option("header", true).parquet(trainDataPath)
+        df_valid.coalesce(1).write.option("header", true).parquet(validDataPath)
+        df_test.coalesce(1).write.option("header", true).parquet(testDataPath)
 
         /* NOTE: How to read saved data:
         val df_train = spark.read.format("csv").option("header", true).load("block_train_data")

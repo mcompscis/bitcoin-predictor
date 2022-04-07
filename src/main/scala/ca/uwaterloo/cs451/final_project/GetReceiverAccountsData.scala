@@ -37,8 +37,9 @@ object GetReceiverAccountsData {
         val sc = new SparkContext(conf)
 
         val btcUsdDataPath = "Coinbase_BTCUSD.pq"
-        val sparkSession = SparkSession.builder.getOrCreate
-        var btc_usd_rdd = sparkSession.read.parquet(btcUsdDataPath).rdd
+        val spark = SparkSession.builder.getOrCreate
+        spark.sparkContext.setLogLevel("ERROR")
+        var btc_usd_rdd = spark.read.parquet(btcUsdDataPath).rdd
                                 .map(x => (x(0).toString.toLong,(x(1).toString.toDouble, x(2).toString.toDouble,
                                 x(3).toString.toDouble, x(4).toString.toDouble, x(5).toString.toDouble,
                                 x(6).toString, x(7).toString.toDouble))
@@ -73,7 +74,7 @@ object GetReceiverAccountsData {
         println(s"NUMBER OF RECEIVERS REPEATING IN >= 2.5% of Blocks: ${numReceiversShowUpGt2_5PctBlocks}")
         println(s"NUMBER OF RECEIVERS REPEATING IN >= 1.25% of Blocks: ${numReceiversShowUpGt1_25PctBlocks}")
         // Let's define Popular receiver accounts as receiver accounts showing up in >= 5% of blocks (100 blocks)
-        val popularReceivers = rcvrAcctPercentageOfBlocks.filter(x => x._2>0.0125) // 0.025 means receiver shows up in at least 50 blocks
+        val popularReceivers = rcvrAcctPercentageOfBlocks.filter(x => x._2>0.0075) // 0.025 means receiver shows up in at least 50 blocks
         // < 100 blocks (< 00)
 
         val rcvrAcctWithAddrKey = rcvrAcctRDD.map(x => (x._2, (x._1, x._3, x._4, x._5)))

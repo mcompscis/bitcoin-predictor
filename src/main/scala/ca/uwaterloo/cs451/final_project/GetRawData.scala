@@ -85,6 +85,7 @@ object GetRawData {
         val rcvrAcctRawDataOutputDir = "receiver_account_raw_data"
         val trainRcvrAcctDataOutputDir = "train_receiver_account_raw_data"
         val testRcvrAcctDataOutputDir = "test_receiver_account_raw_data"
+        val bitcoin_blocks_path = "bitcoin_blocks_v2"
 
         val outputDirs = List(rawTransactionsOutputDir, rcvrAcctRawDataOutputDir, trainRcvrAcctDataOutputDir, testRcvrAcctDataOutputDir)
         outputDirs.foreach(outputDir => {
@@ -102,7 +103,7 @@ object GetRawData {
         
         val btcUsdRDDMapBroadcast = sc.broadcast(btc_usd_rdd.collectAsMap)
       
-        var binaryFiles = sc.binaryFiles("bitcoin_blocks")
+        var binaryFiles = sc.binaryFiles(bitcoin_blocks_path)
         // binaryFiles = sc.parallelize(binaryFiles.take(1))
         var blocks = binaryFiles.flatMap(binaryFile => {
             var blocks = readBlocks(binaryFile._2.open(), List())
@@ -138,7 +139,7 @@ object GetRawData {
         val blockWithRcvrAcctBtcUsdData = blockWithRcvrAcctData.map(x => (x._1, btcUsdRDDMapBroadcast.value(x._1)._4, x._2._1, x._2._2, x._2._3))
         // (unixtime, btc_usd_price, public_key_script, amtInBTCReceivedByThatAddressInThatBlock, numTransactions they received in block)
         val blockTimestampsRDD = blockWithRcvrAcctData.map(x => x._1).distinct.sortBy(x => x, true).zipWithIndex()
-        val finalTrainingPointUnixTime = blockTimestampsRDD.filter(x => (x._2 == 1999)).take(1)(0)._1  // NOTE: Hardcoding first 2000 points as training
+        val finalTrainingPointUnixTime = blockTimestampsRDD.filter(x => (x._2 == 3800)).take(1)(0)._1  // NOTE: Hardcoding first 3800 points as training
         val numBlocks = blockTimestampsRDD.count
         val trainData = blockWithRcvrAcctBtcUsdData.filter(x => (x._1 <= finalTrainingPointUnixTime))
         val testData = blockWithRcvrAcctBtcUsdData.filter(x => (x._1 > finalTrainingPointUnixTime))
