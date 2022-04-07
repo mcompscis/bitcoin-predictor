@@ -19,3 +19,7 @@ spark-submit --deploy-mode client --class ca.uwaterloo.cs451.final_project.Extra
 spark-submit --deploy-mode client --class ca.uwaterloo.cs451.final_project.TrainAndEvaluateModelV1 --num-executors 4 --executor-cores 4 --executor-memory 24G --driver-memory 2g target/assignments-1.0.jar
 
 spark-submit --deploy-mode client --class ca.uwaterloo.cs451.final_project.HyperparameterTuner --num-executors 4 --executor-cores 4 --executor-memory 24G --driver-memory 2g target/assignments-1.0.jar
+
+spark-submit --deploy-mode client --class ca.uwaterloo.cs451.final_project.ExtractTrainTestDataV2 --num-executors 4 --executor-cores 4 --executor-memory 24G --driver-memory 2g target/assignments-1.0.jar
+
+spark-submit --deploy-mode client --class ca.uwaterloo.cs451.final_project.TrainAndEvaluateModelV2 --num-executors 4 --executor-cores 4 --executor-memory 24G --driver-memory 2g target/assignments-1.0.jar

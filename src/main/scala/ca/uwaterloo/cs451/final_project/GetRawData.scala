@@ -80,7 +80,6 @@ object GetRawData {
 
         val conf = new SparkConf().setAppName("Raw Data Bitcoin Parser")
         val sc = new SparkContext(conf)
-
         val rawTransactionsOutputDir = "raw_transactions"
         val rcvrAcctRawDataOutputDir = "receiver_account_raw_data"
         val trainRcvrAcctDataOutputDir = "train_receiver_account_raw_data"
@@ -93,8 +92,9 @@ object GetRawData {
         })
 
         val btcUsdDataPath = "Coinbase_BTCUSD.pq"
-        val sparkSession = SparkSession.builder.getOrCreate
-        var btc_usd_rdd = sparkSession.read.parquet(btcUsdDataPath).rdd
+        val spark = SparkSession.builder.getOrCreate
+        spark.sparkContext.setLogLevel("ERROR")
+        var btc_usd_rdd = spark.read.parquet(btcUsdDataPath).rdd
                                 .map(x => (x(0).toString.toLong,(x(1).toString.toDouble, x(2).toString.toDouble,
                                 x(3).toString.toDouble, x(4).toString.toDouble, x(5).toString.toDouble,
                                 x(6).toString, x(7).toString.toDouble))
@@ -109,6 +109,8 @@ object GetRawData {
             var blocks = readBlocks(binaryFile._2.open(), List())
             blocks
         })
+
+        println(s"NUMBER OF BLOCKS: ${blocks.count}")
         
         var txns = blocks.flatMap(block => {
             var buffer = ArrayBuffer[(Long, String, Int, Int, Double, String)]()
@@ -129,8 +131,9 @@ object GetRawData {
         })
         // (unixtime, txid, numReceivers, numUniqueReceivers, amountInBtc, publicKeyScript)
 
-        // println("MINIMUM TRANSACTION TIME: " + txns.takeOrdered(1)(Ordering[Long].on(x => x._1))(0))
-        // println("MAXIMUM TRANSACTION TIME: " + txns.top(1)(Ordering[Long].on(x => x._1))(0))
+        println(s"Total Number of Transactions: ${txns.count}")
+        println("MINIMUM TRANSACTION TIME: " + txns.takeOrdered(1)(Ordering[Long].on(x => x._1))(0))
+        println("MAXIMUM TRANSACTION TIME: " + txns.top(1)(Ordering[Long].on(x => x._1))(0))
 
         val blockWithRcvrAcctData = txns.map(txn => ((txn._1, txn._6), (txn._5, 1))) // ((unixtime, publicKeyScript), (amt, 1))
                                     .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2))
@@ -139,7 +142,7 @@ object GetRawData {
         val blockWithRcvrAcctBtcUsdData = blockWithRcvrAcctData.map(x => (x._1, btcUsdRDDMapBroadcast.value(x._1)._4, x._2._1, x._2._2, x._2._3))
         // (unixtime, btc_usd_price, public_key_script, amtInBTCReceivedByThatAddressInThatBlock, numTransactions they received in block)
         val blockTimestampsRDD = blockWithRcvrAcctData.map(x => x._1).distinct.sortBy(x => x, true).zipWithIndex()
-        val finalTrainingPointUnixTime = blockTimestampsRDD.filter(x => (x._2 == 3800)).take(1)(0)._1  // NOTE: Hardcoding first 3800 points as training
+        val finalTrainingPointUnixTime = blockTimestampsRDD.filter(x => (x._2 == 3999)).take(1)(0)._1  // NOTE: Hardcoding first 3800 points as training
         val numBlocks = blockTimestampsRDD.count
         val trainData = blockWithRcvrAcctBtcUsdData.filter(x => (x._1 <= finalTrainingPointUnixTime))
         val testData = blockWithRcvrAcctBtcUsdData.filter(x => (x._1 > finalTrainingPointUnixTime))

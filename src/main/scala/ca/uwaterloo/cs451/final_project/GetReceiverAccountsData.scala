@@ -68,13 +68,15 @@ object GetReceiverAccountsData {
         val numReceiversShowUpGt5PctBlocks = rcvrAcctPercentageOfBlocks.filter(x => x._2>0.05).count
         val numReceiversShowUpGt2_5PctBlocks = rcvrAcctPercentageOfBlocks.filter(x => x._2>0.025).count
         val numReceiversShowUpGt1_25PctBlocks = rcvrAcctPercentageOfBlocks.filter(x => x._2>0.0125).count
+        val numReceiversShowUpGt0_625PctBlocks = rcvrAcctPercentageOfBlocks.filter(x => x._2>=0.00625).count
         println(s"NUMBER OF RECEIVERS REPEATING IN >= 20% of Blocks: ${numReceiversShowUpGt20PctBlocks}")
         println(s"NUMBER OF RECEIVERS REPEATING IN >= 10% of Blocks: ${numReceiversShowUpGt10PctBlocks}")
         println(s"NUMBER OF RECEIVERS REPEATING IN >= 5% of Blocks: ${numReceiversShowUpGt5PctBlocks}")
         println(s"NUMBER OF RECEIVERS REPEATING IN >= 2.5% of Blocks: ${numReceiversShowUpGt2_5PctBlocks}")
         println(s"NUMBER OF RECEIVERS REPEATING IN >= 1.25% of Blocks: ${numReceiversShowUpGt1_25PctBlocks}")
+        println(s"NUMBER OF RECEIVERS REPEATING IN >= 0.625% of Blocks: ${numReceiversShowUpGt0_625PctBlocks}")
         // Let's define Popular receiver accounts as receiver accounts showing up in >= 5% of blocks (100 blocks)
-        val popularReceivers = rcvrAcctPercentageOfBlocks.filter(x => x._2>0.0075) // 0.025 means receiver shows up in at least 50 blocks
+        val popularReceivers = rcvrAcctPercentageOfBlocks.filter(x => x._2>=0.00625) // 0.025 means receiver shows up in at least 50 blocks
         // < 100 blocks (< 00)
 
         val rcvrAcctWithAddrKey = rcvrAcctRDD.map(x => (x._2, (x._1, x._3, x._4, x._5)))

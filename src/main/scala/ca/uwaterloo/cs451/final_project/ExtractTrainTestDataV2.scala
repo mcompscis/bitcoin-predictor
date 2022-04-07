@@ -87,7 +87,8 @@ object ExtractTrainTestDataV2 {
         val validDataPath = "valid_bitcoin_blocks_data"
         val testDataPath = "test_bitcoin_blocks_data"
         val allDataPath = "test.csv"
-        val outputDirs = List(allDataPath, trainDataPath, validDataPath, testDataPath)
+        val validAndTestDataPath = "valid_test_bitcoin_blocks_data"
+        val outputDirs = List(allDataPath, trainDataPath, validDataPath, testDataPath, validAndTestDataPath)
         outputDirs.foreach(outputDir => {
             FileSystem.get(sc.hadoopConfiguration).delete(new Path(outputDir), true)
         })
@@ -95,6 +96,7 @@ object ExtractTrainTestDataV2 {
 
         val btcUsdDataPath = "Coinbase_BTCUSD.pq"
         val spark = SparkSession.builder.getOrCreate
+        spark.sparkContext.setLogLevel("ERROR")
         import spark.implicits._
         val sqlContext = new org.apache.spark.sql.SQLContext(sc)
         var btc_usd_rdd = spark.read.parquet(btcUsdDataPath).rdd
@@ -171,6 +173,8 @@ object ExtractTrainTestDataV2 {
             avgAmtOfBtcPerTxn, numTxnsWithMoreThan10Outputs, numHighValueTxnsInBlock, bitcoinPrice4HrLater, label, priceDiffBtw4HrLaterAndCurrPrice)
         }).sortBy(x => x._2, true)
 
+        println(s"NUMBER OF BLOCKS: ${blockLevelData.count}")
+
         var df = blockLevelData.toDF("blockId", "blockFloorTime", "numUniqueReceivers", "numTxnsInBlock", "blockFeeReward", 
             "totalBtcAmountReceivedInBlock", "proportionOfReceiversWith65AccInBlock", "proportionOfReceiversWith70AccInBlock",
             "proportionOfReceiversWith75AccInBlock", "proportionOfReceiversWith80AccInBlock", "proportionOfReceiversWith90AccInBlock",
@@ -200,15 +204,18 @@ object ExtractTrainTestDataV2 {
         df = df.withColumn("changeInBtcPriceBtw2And3HrAgo", col("bitcoinPrice2HrAgo") - col("bitcoinPrice3HrAgo"))        
         df = df.withColumn("changeInBtcPriceBtw3And4HrAgo", col("bitcoinPrice3HrAgo") - col("bitcoinPrice4HrAgo"))        
 
-        var df_train = df.limit(3800).toDF
+        var df_train = df.limit(4000).toDF
+        println(s"NUMBER OF Training Data Blocks: ${df_train.count}")
         var df_valid_and_test = df.except(df_train).toDF
         var df_valid = df_valid_and_test.limit(500).toDF
+        println(s"NUMBER OF Validation Data Blocks: ${df_valid.count}")
         var df_test = df_valid_and_test.except(df_valid).toDF
+        println(s"NUMBER OF Testing Data Blocks: ${df_test.count}")
         // df_train = df_train.except(df_train.limit(4)).toDF
 
         df.coalesce(1).write.option("header",true).parquet(allDataPath)
         // df_train.write.option("header",true).parquet(allDa)
-        // df_valid_and_test.coalesce(1).write.option("header", true).parquet(testDataPath)
+        df_valid_and_test.coalesce(1).write.option("header", true).parquet(validAndTestDataPath)
         df_train.coalesce(1).write.option("header", true).parquet(trainDataPath)
         df_valid.coalesce(1).write.option("header", true).parquet(validDataPath)
         df_test.coalesce(1).write.option("header", true).parquet(testDataPath)

@@ -49,10 +49,12 @@ object TrainAndEvaluateModelV2 {
         val trainDataPath = "train_bitcoin_blocks_data"
         val validDataPath = "valid_bitcoin_blocks_data"
         val testDataPath = "test_bitcoin_blocks_data"
-        
+        val validAndTestDataPath = "valid_test_bitcoin_blocks_data"
+
         var df_train = spark.read.format("parquet").option("header", true).load(trainDataPath)
         val df_valid = spark.read.format("parquet").option("header", true).load(validDataPath)
         var df_test = spark.read.format("parquet").option("header", true).load(testDataPath)
+        var df_valid_test = spark.read.format("parquet").option("header", true).load(validAndTestDataPath)
 
         val features = Array(
           "numUniqueReceivers", 
@@ -82,6 +84,7 @@ object TrainAndEvaluateModelV2 {
         val trainFeatureDF = assembler.transform(df_train)
         val validFeatureDF = assembler.transform(df_valid)
         val testFeatureDF = assembler.transform(df_test)
+        val validTestFeatureDF = assembler.transform(df_valid_test)
 
         // val indexer = new StringIndexer()
         val randomForestClassifier = new RandomForestClassifier().setImpurity("gini").setMaxDepth(10).setNumTrees(500).setFeatureSubsetStrategy("auto").setSeed(1000)
@@ -89,11 +92,14 @@ object TrainAndEvaluateModelV2 {
         val randomForestModel = randomForestClassifier.fit(trainFeatureDF)
         val predictionDf = randomForestModel.transform(validFeatureDF)
         val prediction2Df = randomForestModel.transform(testFeatureDF)
+        val prediction3Df = randomForestModel.transform(validTestFeatureDF)
 
         val preds1RDD = predictionDf.select("prediction", "label").rdd.map(x => (x(0).toString.toDouble, x(1).toString.toDouble))
         val preds2RDD = prediction2Df.select("prediction", "label").rdd.map(x => (x(0).toString.toDouble, x(1).toString.toDouble))
-        List(preds1RDD, preds2RDD).foreach(predsRDD => {
-          val validOrTest = if (predsRDD == preds1RDD) "valid" else "test"
+        val preds3RDD = prediction3Df.select("prediction", "label").rdd.map(x => (x(0).toString.toDouble, x(1).toString.toDouble))
+        List(preds1RDD, preds2RDD, preds3RDD).foreach(predsRDD => {
+          var validOrTest = if (predsRDD == preds1RDD) "valid" else if (predsRDD == preds2RDD) "test" else "Valid and Test"
+
           println("\n-----------")
           println(validOrTest)
           println("-----------\n")
