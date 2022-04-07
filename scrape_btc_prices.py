@@ -64,7 +64,11 @@ def fetch_data(symbol, time_granularity, start, end, iteration):
                 index=False,
             )
     else:
-        print("Did not receieve OK response from Coinbase API")
+        print(start)
+        print(end)
+        print(response.status_code)
+        print(response.content)
+        print("Did not recieve OK response from Coinbase API")
 
 
 def get_csv_filenames(files):
@@ -100,9 +104,9 @@ if __name__ == "__main__":
     }
 
     # hardcoded start 2/27/2022
-    start = "2/26/2022"
+    start = "12/25/2021"
     # hardcode end 3/7/2022
-    end = "3/22/2022"
+    end = "4/5/2022"
     time_intervals = get_time_intervals(
         req_limit=300, req_interval=time_interval_mapping[time], start=start, end=end
     )

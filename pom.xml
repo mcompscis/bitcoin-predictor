@@ -109,6 +109,12 @@
     <artifactId>bitcoin-lib_2.11</artifactId>
     <version>0.16</version>
   </dependency>
+  <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-mllib_2.11</artifactId>
+      <version>2.3.1</version>
+  </dependency>
+
   </dependencies>
 
 </project>
